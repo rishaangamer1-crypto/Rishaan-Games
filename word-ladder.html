@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Ladder Sprint · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .ladder-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0;
+    min-height: 40px;
+  }
+  .ladder-list li {
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: 3px;
+    padding: 6px 0;
+    color: #3DE8FF;
+  }
+  .ladder-list li.target { color: #FFD23D; }
+  input#word-input {
+    background: #1F2640;
+    border: 2px solid #3DE8FF;
+    color: #F2F0E9;
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: 3px;
+    text-align: center;
+    text-transform: uppercase;
+    padding: 10px;
+    border-radius: 6px;
+    width: 160px;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">WORD LADDER SPRINT</h1>
+  <div class="score-row">
+    <div>Time: <b id="time">60</b>s</div>
+    <div>Solved: <b id="solved">0</b></div>
+  </div>
+  <ul class="ladder-list" id="ladder"></ul>
+  <form id="form" autocomplete="off">
+    <input id="word-input" maxlength="6" placeholder="next word">
+  </form>
+  <p class="hint" id="status">Change exactly one letter per step to turn the top word into the target.</p>
+  <button class="control" id="restart">New Puzzle</button>
+</div>
+
+<script>
+// Small dictionary for validating intermediate steps (common short words only).
+const DICT = new Set(`
+CAT COT CAR CAN CAP CAB CAD CAM CUT CUP CUB CUE CUR CAW COW COB COD CON COP COT COY COD
+BAT BAG BAD BAN BAR BAT BAY BED BEG BEE BET BID BIG BIN BIT BOX BOY BUG BUN BUS BUT BUY
+DOT DOG DIG DIM DIN DIP DUE DUG DYE END FAN FAR FAT FED FEW FIG FIN FIT FOG FOR FOX FUN
+GAP GAS GET GOT GUM GUN GUY HAM HAT HEN HER HID HIM HIP HIS HIT HOP HOT HUB HUG HUT
+JAM JAR JAW JET JOB JOG JOT JOY KID KIN KIT LAB LAD LAG LAP LAW LAY LEG LET LID LIE LIP LIT LOG LOT LOW
+MAD MAN MAP MAT MAY MEN MET MIX MOB MOM MOP MUD MUG NAP NET NEW NOD NOR NOT NUT
+OAK ODD OFF OIL OLD ONE OWL OWN PAD PAL PAN PAT PAW PAY PEA PEG PEN PET PIE PIG PIN PIT POD POP POT
+RAG RAM RAN RAP RAT RAW RED RIB RID RIG RIM RIP ROB ROD ROT ROW RUB RUG RUN RUT
+SAD SAG SAT SAW SAY SEA SET SIN SIP SIR SIT SIX SKY SUM SUN SUB TAB TAG TAN TAP TAR TAX TEA TEN TIE TIN TIP TOE TON TOP TOW TOY TRY TUB
+VAN VAT VET VOW WAG WAR WAS WAX WAY WEB WED WET WIG WIN WIT WOK WON WOW WRY YAM YAP YES YET YOU
+ARM ART ASH ASK BAD BAG BAN BAR BED BET BIG BIT BOX BUG BUS BUY
+COLD CORD CARD CARE BARE BALE BALL TALL TELL BELL BELT BOLT BOLD BOND BONE BORE CORE CODE COPE COPE
+WARM WORM WORD WARD CARD WARE HARE HARD HERD HEAD HEAT HEAT MEAT MEAL SEAL SEAT SENT
+LOVE LIVE LIKE LAKE LACE RACE RICE NICE MICE MINE WINE LINE FINE FIVE HIVE HIDE SIDE SIDE SITE
+GOLD BOLD BOLT BELT BELL BALL BALE BATE BASE CASE CANE CAVE CARE CORE CODE COVE DOVE DOSE DOTE
+FISH WISH DISH DASH CASH WASH WASP GASP GAPS
+HEAD HEAL HEAT HEAP LEAP LEAD LEAF LOAF LOAD ROAD READ REAL SEAL SEAT
+MOON MOOD GOOD GOOD FOOD FOOT FORT FORM WORM WORD WARD WARM
+STAR SCAR SOAR SOAP SOUP SOUR SOUR
+`.split(/\s+/).filter(Boolean));
+
+const puzzles = [
+  ['COLD', 'WARM'],
+  ['GOLD', 'DOVE'],
+  ['FISH', 'WASP'],
+  ['LOVE', 'HIDE'],
+  ['MOON', 'WORD'],
+  ['HEAD', 'SEAL']
+];
+
+let target, chain, timeLeft, timer, solved;
+const ladderEl = document.getElementById('ladder');
+const statusEl = document.getElementById('status');
+const timeEl = document.getElementById('time');
+const solvedEl = document.getElementById('solved');
+const input = document.getElementById('word-input');
+
+function diffByOne(a, b) {
+  if (a.length !== b.length) return false;
+  let diffs = 0;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diffs++;
+  return diffs === 1;
+}
+
+function renderLadder() {
+  ladderEl.innerHTML = '';
+  [...chain].reverse().forEach(w => {
+    const li = document.createElement('li');
+    li.textContent = w;
+    ladderEl.appendChild(li);
+  });
+  const t = document.createElement('li');
+  t.textContent = target;
+  t.className = 'target';
+  ladderEl.appendChild(t);
+}
+
+function newPuzzle() {
+  const [start, end] = puzzles[Math.floor(Math.random() * puzzles.length)];
+  chain = [start];
+  target = end;
+  statusEl.textContent = 'Change exactly one letter per step to turn the top word into the target.';
+  renderLadder();
+  input.value = '';
+  input.focus();
+}
+
+function startTimer() {
+  timeLeft = 60;
+  solved = 0;
+  timeEl.textContent = timeLeft;
+  solvedEl.textContent = solved;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    timeLeft--;
+    timeEl.textContent = timeLeft;
+    if (timeLeft <= 0) {
+      clearInterval(timer);
+      statusEl.textContent = `Time's up! Solved ${solved}. Tap "New Puzzle" to play again.`;
+      input.disabled = true;
+    }
+  }, 1000);
+}
+
+document.getElementById('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const word = input.value.trim().toUpperCase();
+  input.value = '';
+  if (!word) return;
+
+  const current = chain[chain.length - 1];
+  if (word === current) { statusEl.textContent = 'That\'s the same word — try changing a letter.'; return; }
+  if (!diffByOne(current, word)) { statusEl.textContent = 'Change exactly one letter from the word above.'; return; }
+  if (!DICT.has(word) && word !== target) { statusEl.textContent = `"${word}" isn't in the word list — try another.`; return; }
+  if (chain.includes(word)) { statusEl.textContent = 'Already used that word in this ladder.'; return; }
+
+  chain.push(word);
+  renderLadder();
+
+  if (word === target) {
+    solved++;
+    solvedEl.textContent = solved;
+    statusEl.textContent = 'Solved! Next puzzle loading...';
+    setTimeout(() => { if (timeLeft > 0) newPuzzle(); }, 900);
+  } else {
+    statusEl.textContent = 'Good — keep going.';
+  }
+});
+
+document.getElementById('restart').addEventListener('click', () => {
+  input.disabled = false;
+  newPuzzle();
+  startTimer();
+});
+
+newPuzzle();
+startTimer();
+</script>
+
+</body>
+</html>

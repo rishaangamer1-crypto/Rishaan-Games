@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reaction Test · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .pad {
+    width: 280px;
+    height: 280px;
+    margin: 20px auto;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    text-align: center;
+    padding: 20px;
+  }
+  .pad.wait { background: #FF3D81; color: #0B0E1A; }
+  .pad.ready { background: #FFD23D; color: #0B0E1A; }
+  .pad.go { background: #3DE8FF; color: #0B0E1A; }
+  .pad.tooSoon { background: #151A2E; color: #FF3D81; border: 2px solid #FF3D81; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">REACTION TEST</h1>
+  <div class="score-row">
+    <div>Last: <b id="last">—</b> ms</div>
+    <div>Best: <b id="best">—</b> ms</div>
+  </div>
+  <div class="pad wait" id="pad">Click to start</div>
+  <p class="hint">Wait for the pad to turn cyan, then click as fast as you can. Clicking early resets you.</p>
+</div>
+
+<script>
+const pad = document.getElementById('pad');
+const lastEl = document.getElementById('last');
+const bestEl = document.getElementById('best');
+let state = 'idle';
+let timeoutId, startTime;
+let best = localStorage.getItem('reaction-best');
+if (best) bestEl.textContent = best;
+
+function toIdle() {
+  state = 'idle';
+  pad.className = 'pad wait';
+  pad.textContent = 'Click to start';
+}
+
+function toWaiting() {
+  state = 'waiting';
+  pad.className = 'pad wait';
+  pad.textContent = 'Wait for cyan...';
+  const delay = 800 + Math.random() * 2200;
+  timeoutId = setTimeout(toGo, delay);
+}
+
+function toGo() {
+  state = 'go';
+  pad.className = 'pad go';
+  pad.textContent = 'CLICK!';
+  startTime = performance.now();
+}
+
+function toTooSoon() {
+  clearTimeout(timeoutId);
+  state = 'tooSoon';
+  pad.className = 'pad tooSoon';
+  pad.textContent = 'Too soon! Click to retry';
+}
+
+function toResult(ms) {
+  state = 'result';
+  pad.className = 'pad ready';
+  pad.textContent = ms + ' ms — click to retry';
+  lastEl.textContent = ms;
+  if (!best || ms < best) {
+    best = ms;
+    localStorage.setItem('reaction-best', best);
+    bestEl.textContent = best;
+  }
+}
+
+pad.addEventListener('click', () => {
+  if (state === 'idle' || state === 'result' || state === 'tooSoon') {
+    toWaiting();
+  } else if (state === 'waiting') {
+    toTooSoon();
+  } else if (state === 'go') {
+    const ms = Math.round(performance.now() - startTime);
+    toResult(ms);
+  }
+});
+</script>
+
+</body>
+</html>

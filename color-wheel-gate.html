@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Wheel Gate · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">COLOR WHEEL GATE</h1>
+  <div class="score-row">
+    <div>Score: <b id="score">0</b></div>
+    <div>Lives: <b id="lives">3</b></div>
+  </div>
+  <canvas id="board" width="300" height="420"></canvas>
+  <p class="hint">Left/Right arrows to rotate your gate's color. Let blocks through only when your gate matches their color — mismatched blocks cost a life. Tap board to (re)start.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+
+const COLORS = ['#FF3D81', '#3DE8FF', '#FFD23D', '#9B6BFF'];
+const GATE_Y = 380;
+let gateIndex, blocks, score, lives, alive, spawnTimer;
+
+function reset() {
+  gateIndex = 0;
+  blocks = [];
+  score = 0;
+  lives = 3;
+  alive = true;
+  spawnTimer = 0;
+  scoreEl.textContent = score;
+  livesEl.textContent = lives;
+}
+
+window.addEventListener('keydown', e => {
+  if (!alive) return;
+  if (e.key === 'ArrowLeft') gateIndex = (gateIndex + COLORS.length - 1) % COLORS.length;
+  if (e.key === 'ArrowRight') gateIndex = (gateIndex + 1) % COLORS.length;
+});
+
+function spawnBlock() {
+  blocks.push({
+    x: 30 + Math.random() * 240,
+    y: -20,
+    color: Math.floor(Math.random() * COLORS.length),
+    speed: 1.6 + Math.random() * 1.2,
+    resolved: false
+  });
+}
+
+function step() {
+  if (alive) {
+    spawnTimer++;
+    if (spawnTimer > 55) { spawnTimer = 0; spawnBlock(); }
+
+    blocks.forEach(b => {
+      b.y += b.speed;
+      if (!b.resolved && b.y >= GATE_Y - 10 && b.y <= GATE_Y + 10) {
+        b.resolved = true;
+        if (b.color === gateIndex) {
+          score += 10;
+          scoreEl.textContent = score;
+        } else {
+          lives--;
+          livesEl.textContent = lives;
+          if (lives <= 0) alive = false;
+        }
+      }
+    });
+    blocks = blocks.filter(b => b.y < 440);
+  }
+
+  draw();
+  requestAnimationFrame(step);
+}
+
+function draw() {
+  ctx.fillStyle = '#151A2E';
+  ctx.fillRect(0, 0, 300, 420);
+
+  blocks.forEach(b => {
+    ctx.fillStyle = COLORS[b.color];
+    ctx.fillRect(b.x - 12, b.y - 12, 24, 24);
+  });
+
+  ctx.strokeStyle = COLORS[gateIndex];
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(20, GATE_Y);
+  ctx.lineTo(280, GATE_Y);
+  ctx.stroke();
+
+  if (!alive) {
+    ctx.fillStyle = 'rgba(11,14,26,0.75)';
+    ctx.fillRect(0, 0, 300, 420);
+    ctx.fillStyle = '#F2F0E9';
+    ctx.font = '15px Space Grotesk, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Out of lives — tap to retry', 150, 210);
+  }
+}
+
+canvas.addEventListener('click', () => { if (!alive) reset(); });
+
+reset();
+requestAnimationFrame(step);
+</script>
+
+</body>
+</html>

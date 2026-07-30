@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse Grid · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .pulse-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    width: 280px;
+    padding: 12px;
+  }
+  .pulse-cell {
+    aspect-ratio: 1;
+    background: #1F2640;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .12s ease;
+  }
+  .pulse-cell.lit { background: #3DE8FF; }
+  .pulse-cell.wrong { background: #FF3D81; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">PULSE GRID</h1>
+  <div class="score-row">
+    <div>Round: <b id="round">0</b></div>
+    <div>Best: <b id="best">0</b></div>
+  </div>
+  <div class="pulse-board board" id="board"></div>
+  <p class="hint" id="status">Watch the pattern, then repeat it by clicking tiles in the same order.</p>
+</div>
+
+<script>
+const boardEl = document.getElementById('board');
+const roundEl = document.getElementById('round');
+const bestEl = document.getElementById('best');
+const statusEl = document.getElementById('status');
+let best = Number(localStorage.getItem('pulse-best') || 0);
+bestEl.textContent = best;
+
+const N = 16;
+let sequence, input, round, accepting, cells;
+
+function build() {
+  boardEl.innerHTML = '';
+  cells = [];
+  for (let i = 0; i < N; i++) {
+    const c = document.createElement('div');
+    c.className = 'pulse-cell';
+    c.addEventListener('click', () => handleClick(i));
+    boardEl.appendChild(c);
+    cells.push(c);
+  }
+}
+
+function newGame() {
+  sequence = [];
+  round = 0;
+  roundEl.textContent = 0;
+  nextRound();
+}
+
+function nextRound() {
+  round++;
+  roundEl.textContent = round;
+  sequence.push(Math.floor(Math.random() * N));
+  input = [];
+  accepting = false;
+  statusEl.textContent = 'Watch closely...';
+  playback();
+}
+
+function playback() {
+  let i = 0;
+  const showNext = () => {
+    if (i >= sequence.length) {
+      accepting = true;
+      statusEl.textContent = 'Your turn — repeat the pattern.';
+      return;
+    }
+    const idx = sequence[i];
+    cells[idx].classList.add('lit');
+    setTimeout(() => {
+      cells[idx].classList.remove('lit');
+      i++;
+      setTimeout(showNext, 180);
+    }, 380);
+  };
+  setTimeout(showNext, 500);
+}
+
+function handleClick(i) {
+  if (!accepting) return;
+  input.push(i);
+  const step = input.length - 1;
+  if (i !== sequence[step]) {
+    cells[i].classList.add('wrong');
+    accepting = false;
+    statusEl.textContent = 'Wrong tile — tap the board to try again from round 1.';
+    if (round - 1 > best) {
+      best = round - 1;
+      localStorage.setItem('pulse-best', best);
+      bestEl.textContent = best;
+    }
+    setTimeout(() => cells[i].classList.remove('wrong'), 300);
+    boardEl.dataset.gameover = '1';
+    return;
+  }
+  cells[i].classList.add('lit');
+  setTimeout(() => cells[i].classList.remove('lit'), 200);
+
+  if (input.length === sequence.length) {
+    accepting = false;
+    setTimeout(nextRound, 700);
+  }
+}
+
+boardEl.addEventListener('click', () => {
+  if (boardEl.dataset.gameover === '1') {
+    boardEl.dataset.gameover = '';
+    newGame();
+  }
+});
+
+build();
+newGame();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gravity Flip Runner · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">GRAVITY FLIP RUNNER</h1>
+  <div class="score-row">
+    <div>Distance: <b id="dist">0</b>m</div>
+    <div>Best: <b id="best">0</b>m</div>
+  </div>
+  <canvas id="board" width="400" height="300"></canvas>
+  <p class="hint">Space (or tap) to flip gravity between floor and ceiling. Dodge the spikes as they scroll past.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const distEl = document.getElementById('dist');
+const bestEl = document.getElementById('best');
+let best = Number(localStorage.getItem('gravity-best') || 0);
+bestEl.textContent = best;
+
+const W = 400, H = 300;
+const FLOOR_Y = H - 30, CEIL_Y = 30;
+let player, gravityDown, spikes, distance, speed, alive, spawnTimer;
+
+function reset() {
+  player = { x: 60, y: FLOOR_Y - 12, vy: 0 };
+  gravityDown = true;
+  spikes = [];
+  distance = 0;
+  speed = 3;
+  alive = true;
+  spawnTimer = 0;
+}
+
+function flip() {
+  if (!alive) { reset(); return; }
+  gravityDown = !gravityDown;
+}
+
+window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); flip(); } });
+canvas.addEventListener('click', flip);
+
+function spawnSpike() {
+  const onFloor = Math.random() < 0.5;
+  spikes.push({ x: W + 10, floor: onFloor, w: 18 });
+}
+
+function step() {
+  if (alive) {
+    distance += speed / 20;
+    distEl.textContent = Math.floor(distance);
+    speed = Math.min(7, 3 + distance / 200);
+
+    const targetY = gravityDown ? FLOOR_Y - 12 : CEIL_Y + 12;
+    player.y += (targetY - player.y) * 0.25;
+
+    spawnTimer++;
+    if (spawnTimer > 55 - Math.min(25, distance / 20)) {
+      spawnTimer = 0;
+      spawnSpike();
+    }
+
+    spikes.forEach(s => s.x -= speed);
+    spikes = spikes.filter(s => s.x > -20);
+
+    spikes.forEach(s => {
+      const spikeY = s.floor ? FLOOR_Y : CEIL_Y;
+      const onSameSide = s.floor === gravityDown;
+      if (onSameSide && Math.abs(s.x - player.x) < 16 && Math.abs(player.y - spikeY) < 20) {
+        alive = false;
+        if (Math.floor(distance) > best) {
+          best = Math.floor(distance);
+          localStorage.setItem('gravity-best', best);
+          bestEl.textContent = best;
+        }
+      }
+    });
+  }
+
+  draw();
+  requestAnimationFrame(step);
+}
+
+function draw() {
+  ctx.fillStyle = '#151A2E';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = '#2A3050';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(0, FLOOR_Y + 10); ctx.lineTo(W, FLOOR_Y + 10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, CEIL_Y - 10); ctx.lineTo(W, CEIL_Y - 10); ctx.stroke();
+
+  spikes.forEach(s => {
+    const y = s.floor ? FLOOR_Y + 10 : CEIL_Y - 10;
+    ctx.fillStyle = '#FF3D81';
+    ctx.beginPath();
+    if (s.floor) {
+      ctx.moveTo(s.x - 9, y);
+      ctx.lineTo(s.x + 9, y);
+      ctx.lineTo(s.x, y - 22);
+    } else {
+      ctx.moveTo(s.x - 9, y);
+      ctx.lineTo(s.x + 9, y);
+      ctx.lineTo(s.x, y + 22);
+    }
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  ctx.fillStyle = '#3DE8FF';
+  ctx.fillRect(player.x - 10, player.y - 10, 20, 20);
+
+  if (!alive) {
+    ctx.fillStyle = 'rgba(11,14,26,0.75)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#F2F0E9';
+    ctx.font = '15px Space Grotesk, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Hit a spike — space/tap to retry', W/2, H/2);
+  }
+}
+
+reset();
+requestAnimationFrame(step);
+</script>
+
+</body>
+</html>

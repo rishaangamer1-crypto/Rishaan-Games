@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Echo Chase · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">ECHO CHASE</h1>
+  <div class="score-row">
+    <div>Score: <b id="score">0</b></div>
+    <div>Best: <b id="best">0</b></div>
+  </div>
+  <canvas id="board" width="400" height="400"></canvas>
+  <p class="hint">Arrow keys/WASD to move. Collect the yellow orbs — but your movements repeat as a chasing echo after a few seconds, so don't let it catch you. Tap board to (re)start.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+let best = Number(localStorage.getItem('echo-best') || 0);
+bestEl.textContent = best;
+
+const SPEED = 3;
+const DELAY_FRAMES = 150; // ~2.5s at 60fps
+let player, orb, keys, history, score, alive, active;
+
+function reset() {
+  player = { x: 200, y: 200 };
+  history = [];
+  score = 0;
+  alive = true;
+  active = false;
+  placeOrb();
+  scoreEl.textContent = score;
+}
+
+function placeOrb() {
+  orb = {
+    x: 30 + Math.random() * 340,
+    y: 30 + Math.random() * 340
+  };
+}
+
+keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+function step() {
+  if (!alive) { draw(); requestAnimationFrame(step); return; }
+
+  let dx = 0, dy = 0;
+  if (keys['ArrowUp'] || keys['w']) dy -= 1;
+  if (keys['ArrowDown'] || keys['s']) dy += 1;
+  if (keys['ArrowLeft'] || keys['a']) dx -= 1;
+  if (keys['ArrowRight'] || keys['d']) dx += 1;
+  if (dx || dy) {
+    const len = Math.hypot(dx, dy);
+    player.x += (dx / len) * SPEED;
+    player.y += (dy / len) * SPEED;
+  }
+  player.x = Math.max(8, Math.min(392, player.x));
+  player.y = Math.max(8, Math.min(392, player.y));
+
+  history.push({ x: player.x, y: player.y });
+  if (history.length > DELAY_FRAMES) {
+    history.shift();
+    active = true;
+  }
+
+  if (active) {
+    const echo = history[0];
+    if (Math.hypot(echo.x - player.x, echo.y - player.y) < 14) {
+      alive = false;
+      if (score > best) {
+        best = score;
+        localStorage.setItem('echo-best', best);
+        bestEl.textContent = best;
+      }
+    }
+  }
+
+  if (Math.hypot(orb.x - player.x, orb.y - player.y) < 16) {
+    score += 10;
+    scoreEl.textContent = score;
+    placeOrb();
+  }
+
+  draw();
+  requestAnimationFrame(step);
+}
+
+function draw() {
+  ctx.fillStyle = '#151A2E';
+  ctx.fillRect(0, 0, 400, 400);
+
+  ctx.fillStyle = '#FFD23D';
+  ctx.beginPath();
+  ctx.arc(orb.x, orb.y, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (active) {
+    const echo = history[0];
+    ctx.fillStyle = 'rgba(255,61,129,0.7)';
+    ctx.beginPath();
+    ctx.arc(echo.x, echo.y, 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = '#3DE8FF';
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (!alive) {
+    ctx.fillStyle = 'rgba(11,14,26,0.75)';
+    ctx.fillRect(0, 0, 400, 400);
+    ctx.fillStyle = '#F2F0E9';
+    ctx.font = '16px Space Grotesk, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Caught by your echo — tap to retry', 200, 200);
+  }
+}
+
+canvas.addEventListener('click', () => { if (!alive) reset(); });
+
+reset();
+requestAnimationFrame(step);
+</script>
+
+</body>
+</html>

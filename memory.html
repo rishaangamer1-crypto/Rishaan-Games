@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Match · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .mem-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    max-width: 360px;
+    padding: 16px;
+  }
+  .card {
+    aspect-ratio: 1;
+    background: #1F2640;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .card.flipped { background: #3DE8FF; color: #0B0E1A; }
+  .card.matched { background: #FFD23D; color: #0B0E1A; opacity: .85; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">MEMORY MATCH</h1>
+  <div class="score-row">
+    <div>Moves: <b id="moves">0</b></div>
+    <div>Best: <b id="best">—</b></div>
+  </div>
+  <div class="mem-board board" id="mem-board"></div>
+  <button class="control" id="restart">Shuffle & Restart</button>
+</div>
+
+<script>
+const icons = ['🕹️','👾','🎮','🪙','⭐','💎','🍄','🎯'];
+const boardEl = document.getElementById('mem-board');
+const movesEl = document.getElementById('moves');
+const bestEl = document.getElementById('best');
+
+let cards, first, second, lock, moves, matches;
+let best = localStorage.getItem('memory-best');
+if (best) bestEl.textContent = best;
+
+function build() {
+  cards = [...icons, ...icons].sort(() => Math.random() - 0.5);
+  first = second = null;
+  lock = false;
+  moves = 0;
+  matches = 0;
+  movesEl.textContent = 0;
+  boardEl.innerHTML = '';
+  cards.forEach((icon, i) => {
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.dataset.icon = icon;
+    el.dataset.index = i;
+    el.textContent = '';
+    el.addEventListener('click', () => flip(el));
+    boardEl.appendChild(el);
+  });
+}
+
+function flip(el) {
+  if (lock || el.classList.contains('flipped') || el.classList.contains('matched')) return;
+  el.classList.add('flipped');
+  el.textContent = el.dataset.icon;
+
+  if (!first) {
+    first = el;
+    return;
+  }
+  second = el;
+  lock = true;
+  moves++;
+  movesEl.textContent = moves;
+
+  if (first.dataset.icon === second.dataset.icon) {
+    first.classList.add('matched');
+    second.classList.add('matched');
+    matches++;
+    first = second = null;
+    lock = false;
+    if (matches === icons.length) finish();
+  } else {
+    setTimeout(() => {
+      first.classList.remove('flipped');
+      second.classList.remove('flipped');
+      first.textContent = '';
+      second.textContent = '';
+      first = second = null;
+      lock = false;
+    }, 700);
+  }
+}
+
+function finish() {
+  if (!best || moves < best) {
+    best = moves;
+    localStorage.setItem('memory-best', best);
+    bestEl.textContent = best;
+  }
+}
+
+document.getElementById('restart').addEventListener('click', build);
+build();
+</script>
+
+</body>
+</html>

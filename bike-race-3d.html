@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bike Race 3D · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  body { overflow: hidden; }
+  #race-wrap { max-width: 700px; margin: 0 auto; padding: 16px 16px 40px; }
+  #race-wrap h1 { font-family: 'Press Start 2P', monospace; font-size: 16px; color: var(--yellow); text-align: center; margin-bottom: 10px; }
+  #canvas-wrap { position: relative; width: 100%; max-width: 640px; aspect-ratio: 4/3; margin: 0 auto; border-radius: 10px; overflow: hidden; background: #000; }
+  #race-canvas { width: 100%; height: 100%; display: block; }
+  #divider { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.4); pointer-events: none; }
+  .hud { position: absolute; top: 8px; font-family: 'Press Start 2P', monospace; font-size: 11px; color: #fff; text-shadow: 0 0 4px #000; pointer-events: none; }
+  #hud-p1 { left: 10px; color: #3DE8FF; }
+  #hud-p2 { right: 10px; color: #FF3D81; text-align: right; }
+  #overlay-msg {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: rgba(11,14,26,0.8); color: #F2F0E9; font-family: 'Press Start 2P', monospace;
+    font-size: 16px; text-align: center; flex-direction: column; gap: 16px;
+  }
+  #back-link-row { text-align: center; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div id="race-wrap">
+  <div id="back-link-row"><a class="back-link" href="../index.html">&larr; Back to hub</a></div>
+  <h1>BIKE RACE 3D</h1>
+  <div id="canvas-wrap">
+    <canvas id="race-canvas"></canvas>
+    <div id="divider"></div>
+    <div class="hud" id="hud-p1">P1 LAP 0/3</div>
+    <div class="hud" id="hud-p2">P2 LAP 0/3</div>
+    <div id="overlay-msg">
+      <div id="overlay-text">GET READY</div>
+      <button class="control" id="overlay-btn">Start Race</button>
+    </div>
+  </div>
+  <p class="hint" style="text-align:center; margin-top:12px;">
+    Player 1 (cyan): W/S accelerate/brake, A/D steer.<br>
+    Player 2 (pink): Arrow Up/Down accelerate/brake, Left/Right steer.<br>
+    First to 3 laps wins.
+  </p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const OVAL_X = 1.6, INNER = 15, OUTER = 25, TRACK_MID = (INNER+OUTER)/2;
+const TARGET_LAPS = 3;
+
+const canvas = document.getElementById('race-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0B0E1A);
+
+// Lighting
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const sun = new THREE.DirectionalLight(0xffffff, 0.8);
+sun.position.set(30, 50, 20);
+scene.add(sun);
+
+// Ground
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(140, 140),
+  new THREE.MeshStandardMaterial({ color: 0x14361f })
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+// Track ring (visual)
+const ringGeo = new THREE.RingGeometry(INNER, OUTER, 64);
+const ring = new THREE.Mesh(ringGeo, new THREE.MeshStandardMaterial({ color: 0x2A3050 }));
+ring.rotation.x = -Math.PI / 2;
+ring.position.y = 0.02;
+ring.scale.x = OVAL_X;
+scene.add(ring);
+
+// Center line (visual guide)
+const midGeo = new THREE.RingGeometry(TRACK_MID - 0.3, TRACK_MID + 0.3, 64);
+const midLine = new THREE.Mesh(midGeo, new THREE.MeshStandardMaterial({ color: 0xFFD23D }));
+midLine.rotation.x = -Math.PI / 2;
+midLine.position.y = 0.03;
+midLine.scale.x = OVAL_X;
+scene.add(midLine);
+
+function makeBike(color) {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(1, 0.6, 2),
+    new THREE.MeshStandardMaterial({ color })
+  );
+  body.position.y = 0.5;
+  group.add(body);
+  const wheelGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.3, 12);
+  [[-0.5, 0.3, 0.7], [0.5, 0.3, 0.7], [-0.5, 0.3, -0.7], [0.5, 0.3, -0.7]].forEach(([x,y,z]) => {
+    const w = new THREE.Mesh(wheelGeo, new THREE.MeshStandardMaterial({ color: 0x151A2E }));
+    w.rotation.z = Math.PI / 2;
+    w.position.set(x, y, z);
+    group.add(w);
+  });
+  return group;
+}
+
+const bike1Mesh = makeBike(0x3DE8FF);
+const bike2Mesh = makeBike(0xFF3D81);
+scene.add(bike1Mesh, bike2Mesh);
+
+function angleOf(x, z) { return Math.atan2(x / OVAL_X, z); }
+function unwrapDelta(prev, curr) {
+  let d = curr - prev;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  return d;
+}
+function clampToTrack(x, z) {
+  const xn = x / OVAL_X;
+  const r = Math.hypot(xn, z);
+  if (r >= INNER + 0.5 && r <= OUTER - 0.5) return { x, z, hit: false };
+  const targetR = r < INNER + 0.5 ? INNER + 0.5 : OUTER - 0.5;
+  const scale = targetR / r;
+  return { x: xn * scale * OVAL_X, z: z * scale, hit: true };
+}
+
+function makeBikeState(startX, startZ, heading) {
+  return {
+    x: startX, z: startZ, heading, speed: 0,
+    totalAngle: 0, prevAngle: angleOf(startX, startZ), laps: 0, finished: false
+  };
+}
+
+let bike1 = makeBikeState(TRACK_MID * OVAL_X, 0, Math.PI / 2 * -1);
+let bike2 = makeBikeState((TRACK_MID + 2) * OVAL_X, 0, Math.PI / 2 * -1);
+
+const MAX_SPEED = 22, ACCEL = 16, BRAKE = 24, FRICTION = 6, TURN_RATE = 2.0;
+
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+let racing = false, winner = null;
+const overlay = document.getElementById('overlay-msg');
+const overlayText = document.getElementById('overlay-text');
+const overlayBtn = document.getElementById('overlay-btn');
+overlay.style.display = 'flex';
+
+function startRace() {
+  bike1 = makeBikeState(TRACK_MID * OVAL_X, 0, Math.PI);
+  bike2 = makeBikeState((TRACK_MID + 2) * OVAL_X, 0, Math.PI);
+  racing = true;
+  winner = null;
+  overlay.style.display = 'none';
+}
+
+overlayBtn.addEventListener('click', startRace);
+
+function updateBike(state, accelInput, turnInput, dt) {
+  if (state.finished) { state.speed *= 0.9; }
+  else {
+    if (accelInput > 0) state.speed += ACCEL * dt;
+    else if (accelInput < 0) state.speed -= BRAKE * dt;
+    else state.speed -= Math.sign(state.speed) * FRICTION * dt;
+    state.speed = Math.max(-MAX_SPEED * 0.5, Math.min(MAX_SPEED, state.speed));
+
+    const turnEffect = TURN_RATE * (0.3 + 0.7 * Math.min(1, Math.abs(state.speed) / MAX_SPEED));
+    state.heading += turnInput * turnEffect * dt * (state.speed >= 0 ? 1 : -1);
+  }
+
+  const nx = state.x + Math.sin(state.heading) * state.speed * dt;
+  const nz = state.z + Math.cos(state.heading) * state.speed * dt;
+  const clamped = clampToTrack(nx, nz);
+  if (clamped.hit) state.speed *= 0.6;
+  state.x = clamped.x;
+  state.z = clamped.z;
+
+  const currAngle = angleOf(state.x, state.z);
+  const delta = unwrapDelta(state.prevAngle, currAngle);
+  state.totalAngle += delta;
+  state.prevAngle = currAngle;
+
+  if (!state.finished) {
+    const laps = Math.floor(Math.abs(state.totalAngle) / (2 * Math.PI));
+    if (laps > state.laps) state.laps = laps;
+    if (state.laps >= TARGET_LAPS) {
+      state.finished = true;
+    }
+  }
+}
+
+function checkRaceEnd() {
+  if (bike1.finished && !winner) { winner = 'P1'; }
+  if (bike2.finished && !winner) { winner = 'P2'; }
+  if (winner && racing) {
+    racing = false;
+    overlay.style.display = 'flex';
+    overlayText.textContent = winner + ' WINS!';
+    overlayBtn.textContent = 'Race Again';
+  }
+}
+
+// Cameras (chase view per player)
+const camera1 = new THREE.PerspectiveCamera(60, 1, 0.1, 300);
+const camera2 = new THREE.PerspectiveCamera(60, 1, 0.1, 300);
+
+function updateCamera(cam, state) {
+  const behind = new THREE.Vector3(Math.sin(state.heading + Math.PI) * 8, 5, Math.cos(state.heading + Math.PI) * 8);
+  cam.position.set(state.x + behind.x, behind.y, state.z + behind.z);
+  cam.lookAt(state.x, 1, state.z);
+}
+
+function updateBikeMesh(mesh, state) {
+  mesh.position.set(state.x, 0, state.z);
+  mesh.rotation.y = state.heading;
+}
+
+const hud1 = document.getElementById('hud-p1');
+const hud2 = document.getElementById('hud-p2');
+
+let lastTime = performance.now();
+function animate() {
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+
+  if (racing) {
+    const accel1 = keys['w'] ? 1 : keys['s'] ? -1 : 0;
+    const turn1 = keys['a'] ? 1 : keys['d'] ? -1 : 0;
+    const accel2 = keys['ArrowUp'] ? 1 : keys['ArrowDown'] ? -1 : 0;
+    const turn2 = keys['ArrowLeft'] ? 1 : keys['ArrowRight'] ? -1 : 0;
+
+    updateBike(bike1, accel1, turn1, dt);
+    updateBike(bike2, accel2, turn2, dt);
+    checkRaceEnd();
+  }
+
+  updateBikeMesh(bike1Mesh, bike1);
+  updateBikeMesh(bike2Mesh, bike2);
+  updateCamera(camera1, bike1);
+  updateCamera(camera2, bike2);
+
+  hud1.textContent = `P1 LAP ${Math.min(bike1.laps, TARGET_LAPS)}/${TARGET_LAPS}`;
+  hud2.textContent = `P2 LAP ${Math.min(bike2.laps, TARGET_LAPS)}/${TARGET_LAPS}`;
+
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setScissorTest(true);
+
+  renderer.setViewport(0, 0, w/2, h);
+  renderer.setScissor(0, 0, w/2, h);
+  camera1.aspect = (w/2) / h;
+  camera1.updateProjectionMatrix();
+  renderer.render(scene, camera1);
+
+  renderer.setViewport(w/2, 0, w/2, h);
+  renderer.setScissor(w/2, 0, w/2, h);
+  camera2.aspect = (w/2) / h;
+  camera2.updateProjectionMatrix();
+  renderer.render(scene, camera2);
+
+  requestAnimationFrame(animate);
+}
+
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+}
+window.addEventListener('resize', resize);
+resize();
+
+updateBikeMesh(bike1Mesh, bike1);
+updateBikeMesh(bike2Mesh, bike2);
+updateCamera(camera1, bike1);
+updateCamera(camera2, bike2);
+animate();
+</script>
+
+</body>
+</html>

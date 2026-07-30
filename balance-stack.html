@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balance Stack · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .meter-wrap { width: 300px; margin: 10px auto; background: #1F2640; border-radius: 8px; height: 14px; position: relative; overflow: hidden; }
+  .meter-fill { position: absolute; top: 0; bottom: 0; width: 4px; background: #FF3D81; left: 50%; transition: left .1s linear; }
+  .meter-wrap::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: rgba(255,255,255,0.3); }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">BALANCE STACK</h1>
+  <div class="score-row">
+    <div>Height: <b id="height">0</b></div>
+    <div>Best: <b id="best">0</b></div>
+  </div>
+  <canvas id="board" width="300" height="380"></canvas>
+  <div class="meter-wrap"><div class="meter-fill" id="meter"></div></div>
+  <p class="hint">Space or tap to drop the swinging block. Drop it too far off-center too often and the tower topples. Center drops steady the balance meter.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const heightEl = document.getElementById('height');
+const bestEl = document.getElementById('best');
+const meterEl = document.getElementById('meter');
+let best = Number(localStorage.getItem('balance-best') || 0);
+bestEl.textContent = best;
+
+const W = 300, H = 380;
+const BLOCK_H = 18;
+let swingX, swingSpeed, blocks, balance, alive, t;
+
+function reset() {
+  blocks = [];
+  balance = 0;
+  alive = true;
+  swingSpeed = 2.2;
+  t = 0;
+  heightEl.textContent = 0;
+  meterEl.style.left = '50%';
+}
+
+function drop() {
+  if (!alive) { reset(); return; }
+  const offset = swingX - W/2; // negative = left of center, positive = right
+  balance += offset * 0.35;
+  blocks.push({ x: swingX - 45, w: 90 });
+  heightEl.textContent = blocks.length;
+  if (blocks.length > best) {
+    best = blocks.length;
+    localStorage.setItem('balance-best', best);
+    bestEl.textContent = best;
+  }
+  const pct = 50 + Math.max(-50, Math.min(50, balance / 3));
+  meterEl.style.left = pct + '%';
+  if (Math.abs(balance) > 140) alive = false;
+  swingSpeed = Math.min(6, 2.2 + blocks.length * 0.15);
+}
+
+window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); drop(); } });
+canvas.addEventListener('click', drop);
+
+function step() {
+  if (alive) {
+    t += swingSpeed;
+    swingX = W/2 + Math.sin(t * 0.05) * (W/2 - 50);
+  }
+  draw();
+  requestAnimationFrame(step);
+}
+
+function draw() {
+  ctx.fillStyle = '#151A2E';
+  ctx.fillRect(0, 0, W, H);
+
+  const baseY = H - 20;
+  blocks.forEach((b, i) => {
+    const y = baseY - (i+1) * BLOCK_H;
+    ctx.fillStyle = i % 2 === 0 ? '#3DE8FF' : '#9B6BFF';
+    ctx.fillRect(b.x, y, b.w, BLOCK_H - 2);
+  });
+
+  if (alive) {
+    const swingY = baseY - (blocks.length+1) * BLOCK_H - 20;
+    ctx.fillStyle = '#00E58F';
+    ctx.fillRect(swingX - 45, swingY, 90, BLOCK_H - 2);
+  }
+
+  ctx.strokeStyle = '#2A3050';
+  ctx.beginPath(); ctx.moveTo(0, baseY); ctx.lineTo(W, baseY); ctx.stroke();
+
+  if (!alive) {
+    ctx.fillStyle = 'rgba(11,14,26,0.75)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#F2F0E9';
+    ctx.font = '15px Space Grotesk, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Toppled — tap to retry', W/2, H/2);
+  }
+}
+
+reset();
+requestAnimationFrame(step);
+</script>
+
+</body>
+</html>

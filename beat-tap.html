@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beat Tap · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">BEAT TAP</h1>
+  <div class="score-row">
+    <div>Score: <b id="score">0</b></div>
+    <div>Streak: <b id="streak">0</b></div>
+    <div>Lives: <b id="lives">3</b></div>
+  </div>
+  <canvas id="board" width="320" height="90"></canvas>
+  <p class="hint" id="status">Space or tap when the marker crosses the gold zone. Perfect hits keep your streak alive.</p>
+</div>
+
+<script>
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const streakEl = document.getElementById('streak');
+const livesEl = document.getElementById('lives');
+const statusEl = document.getElementById('status');
+
+const W = 320, H = 90;
+const ZONE = { x: 240, w: 30 };
+let markerX, dir, speed, score, streak, lives, alive, flashTimer, flashColor;
+
+function reset() {
+  markerX = 10;
+  dir = 1;
+  speed = 2.4;
+  score = 0;
+  streak = 0;
+  lives = 3;
+  alive = true;
+  flashTimer = 0;
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+  livesEl.textContent = lives;
+  statusEl.textContent = 'Space or tap when the marker crosses the gold zone.';
+}
+
+function tap() {
+  if (!alive) { reset(); return; }
+  const center = ZONE.x + ZONE.w/2;
+  const dist = Math.abs(markerX - center);
+  let gained = 0, msg, color;
+  if (dist < 6) { gained = 30; msg = 'PERFECT'; color = '#00E58F'; streak++; }
+  else if (dist < 16) { gained = 15; msg = 'GOOD'; color = '#FFD23D'; streak++; }
+  else {
+    msg = 'MISS'; color = '#FF3D81'; streak = 0; lives--;
+    livesEl.textContent = lives;
+    if (lives <= 0) { alive = false; statusEl.textContent = 'Out of lives — tap to retry.'; }
+  }
+  score += gained;
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+  flashTimer = 20;
+  flashColor = color;
+  if (alive) statusEl.textContent = msg;
+  speed = Math.min(6, 2.4 + score / 300);
+}
+
+window.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); tap(); } });
+canvas.addEventListener('click', tap);
+
+function step() {
+  if (alive) {
+    markerX += dir * speed;
+    if (markerX > W - 8) { markerX = W - 8; dir = -1; }
+    if (markerX < 8) { markerX = 8; dir = 1; }
+  }
+  if (flashTimer > 0) flashTimer--;
+  draw();
+  requestAnimationFrame(step);
+}
+
+function draw() {
+  ctx.fillStyle = flashTimer > 0 ? flashColor + '22' : '#151A2E';
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.fillStyle = '#FFD23D';
+  ctx.fillRect(ZONE.x, 20, ZONE.w, H - 40);
+
+  ctx.fillStyle = '#3DE8FF';
+  ctx.beginPath();
+  ctx.arc(markerX, H/2, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (!alive) {
+    ctx.fillStyle = 'rgba(11,14,26,0.7)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#F2F0E9';
+    ctx.font = '13px Space Grotesk, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Tap to retry', W/2, H/2 + 4);
+  }
+}
+
+reset();
+requestAnimationFrame(step);
+</script>
+
+</body>
+</html>

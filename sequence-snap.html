@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sequence Snap · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .seq-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+  .seq-item {
+    background: #1F2640;
+    border-radius: 8px;
+    min-width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 15px;
+    color: #3DE8FF;
+  }
+  .seq-item.q { color: #FFD23D; border: 2px dashed #FFD23D; }
+  .choices { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+  .choice-btn {
+    background: #1F2640;
+    border: none;
+    color: #F2F0E9;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 15px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .choice-btn:hover { background: #3DE8FF; color: #0B0E1A; }
+  .choice-btn.correct { background: #00E58F; color: #0B0E1A; }
+  .choice-btn.wrong { background: #FF3D81; color: #0B0E1A; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">SEQUENCE SNAP</h1>
+  <div class="score-row">
+    <div>Score: <b id="score">0</b></div>
+    <div>Streak: <b id="streak">0</b></div>
+  </div>
+  <div class="seq-row" id="seq"></div>
+  <div class="choices" id="choices"></div>
+  <p class="hint" id="status">Work out the rule behind the sequence and pick what comes next.</p>
+</div>
+
+<script>
+const seqEl = document.getElementById('seq');
+const choicesEl = document.getElementById('choices');
+const statusEl = document.getElementById('status');
+const scoreEl = document.getElementById('score');
+const streakEl = document.getElementById('streak');
+let score = 0, streak = 0, answer, locked;
+
+function makePuzzle() {
+  const kind = Math.floor(Math.random() * 4);
+  let seq = [], next, diffs;
+  if (kind === 0) {
+    // arithmetic
+    const start = 1 + Math.floor(Math.random() * 10);
+    const step = 1 + Math.floor(Math.random() * 6) * (Math.random() < 0.5 ? 1 : -1);
+    seq = [0,1,2,3].map(i => start + i * step);
+    next = start + 4 * step;
+  } else if (kind === 1) {
+    // geometric (small factors to keep numbers sane)
+    const start = 1 + Math.floor(Math.random() * 4);
+    const factor = 2 + Math.floor(Math.random() * 2);
+    seq = [0,1,2,3].map(i => start * Math.pow(factor, i));
+    next = start * Math.pow(factor, 4);
+  } else if (kind === 2) {
+    // alternating +a -b pattern
+    const a = 2 + Math.floor(Math.random() * 5);
+    const b = 1 + Math.floor(Math.random() * 3);
+    let cur = 5 + Math.floor(Math.random() * 5);
+    const ops = [a, -b, a, -b];
+    seq = [cur];
+    for (let i = 0; i < 3; i++) { cur += ops[i]; seq.push(cur); }
+    next = seq[3] + ops[3];
+  } else {
+    // fibonacci-style sum of previous two
+    let a = 1 + Math.floor(Math.random()*4), b = 1 + Math.floor(Math.random()*4);
+    seq = [a, b, a+b, a+2*b];
+    next = 2*a + 3*b;
+  }
+  return { seq, next };
+}
+
+function makeChoices(correct) {
+  const set = new Set([correct]);
+  while (set.size < 4) {
+    const delta = (1 + Math.floor(Math.random()*5)) * (Math.random() < 0.5 ? 1 : -1);
+    const candidate = correct + delta;
+    if (candidate !== correct) set.add(candidate);
+  }
+  return Array.from(set).sort(() => Math.random() - 0.5);
+}
+
+function render() {
+  const p = makePuzzle();
+  answer = p.next;
+  locked = false;
+  seqEl.innerHTML = '';
+  p.seq.forEach(n => {
+    const d = document.createElement('div');
+    d.className = 'seq-item';
+    d.textContent = n;
+    seqEl.appendChild(d);
+  });
+  const q = document.createElement('div');
+  q.className = 'seq-item q';
+  q.textContent = '?';
+  seqEl.appendChild(q);
+
+  const choices = makeChoices(answer);
+  choicesEl.innerHTML = '';
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c;
+    btn.addEventListener('click', () => handleChoice(c, btn));
+    choicesEl.appendChild(btn);
+  });
+  statusEl.textContent = 'Work out the rule behind the sequence and pick what comes next.';
+}
+
+function handleChoice(c, btn) {
+  if (locked) return;
+  locked = true;
+  if (c === answer) {
+    score += 20;
+    streak++;
+    btn.classList.add('correct');
+    statusEl.textContent = 'Correct! Next one loading...';
+  } else {
+    streak = 0;
+    btn.classList.add('wrong');
+    statusEl.textContent = `Not quite — it was ${answer}.`;
+  }
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+  setTimeout(render, 1100);
+}
+
+render();
+</script>
+
+</body>
+</html>

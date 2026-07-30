@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirror Bounce · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .mb-board {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 4px;
+    width: 300px;
+    padding: 10px;
+    position: relative;
+  }
+  .mb-cell {
+    aspect-ratio: 1;
+    background: #1F2640;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+    user-select: none;
+    color: #3DE8FF;
+    position: relative;
+  }
+  .mb-cell.start { background: #00E58F; color: #0B0E1A; cursor: default; }
+  .mb-cell.target { background: #FFD23D; color: #0B0E1A; cursor: default; }
+  .mb-cell.lit { box-shadow: inset 0 0 0 2px #FF3D81; }
+  #level-select { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">MIRROR BOUNCE</h1>
+  <div class="score-row">
+    <div>Level: <b id="level">1</b></div>
+    <div>Solved: <b id="solved">0</b></div>
+  </div>
+  <div class="mb-board board" id="board"></div>
+  <button class="control" id="fire">Fire Laser</button>
+  <button class="control" id="clear">Clear Mirrors</button>
+  <p class="hint" id="status">Click a cell to cycle it through empty → / → \ → empty. Redirect the laser (green) into the target (yellow).</p>
+</div>
+
+<script>
+const SIZE = 6;
+const boardEl = document.getElementById('board');
+const statusEl = document.getElementById('status');
+const levelEl = document.getElementById('level');
+const solvedEl = document.getElementById('solved');
+
+const levels = [
+  { start: [0,2], dir: 'right', target: [5,2] },
+  { start: [0,0], dir: 'right', target: [5,3] },
+  { start: [0,5], dir: 'up', target: [5,0] },
+  { start: [0,3], dir: 'right', target: [0,0] },
+  { start: [5,5], dir: 'left', target: [0,0] }
+];
+
+let levelIdx = 0, solved = 0, mirrors, cellEls;
+
+const DELTA = { right: [1,0], left: [-1,0], up: [0,-1], down: [0,1] };
+function reflect(dir, mirror) {
+  const map = {
+    '/': { right: 'up', up: 'right', left: 'down', down: 'left' },
+    '\\': { right: 'down', down: 'right', left: 'up', up: 'left' }
+  };
+  return map[mirror][dir];
+}
+
+function build() {
+  const lvl = levels[levelIdx % levels.length];
+  mirrors = {};
+  boardEl.innerHTML = '';
+  cellEls = {};
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const el = document.createElement('div');
+      el.className = 'mb-cell';
+      const key = x+','+y;
+      if (x === lvl.start[0] && y === lvl.start[1]) el.classList.add('start');
+      else if (x === lvl.target[0] && y === lvl.target[1]) el.classList.add('target');
+      else el.addEventListener('click', () => cycleMirror(key, el));
+      boardEl.appendChild(el);
+      cellEls[key] = el;
+    }
+  }
+  statusEl.textContent = 'Click a cell to cycle it through empty → / → \\ → empty. Redirect the laser (green) into the target (yellow).';
+}
+
+function cycleMirror(key, el) {
+  const seq = [undefined, '/', '\\'];
+  const cur = mirrors[key];
+  const next = seq[(seq.indexOf(cur) + 1) % seq.length];
+  if (next) { mirrors[key] = next; el.textContent = next; }
+  else { delete mirrors[key]; el.textContent = ''; }
+}
+
+function fire() {
+  const lvl = levels[levelIdx % levels.length];
+  Object.values(cellEls).forEach(el => el.classList.remove('lit'));
+  let [x,y] = lvl.start;
+  let dir = lvl.dir;
+  const path = [[x,y]];
+  let hit = false;
+  for (let step = 0; step < 60; step++) {
+    const [dx,dy] = DELTA[dir];
+    x += dx; y += dy;
+    if (x < 0 || y < 0 || x >= SIZE || y >= SIZE) break;
+    path.push([x,y]);
+    if (x === lvl.target[0] && y === lvl.target[1]) { hit = true; break; }
+    const m = mirrors[x+','+y];
+    if (m) dir = reflect(dir, m);
+  }
+  path.forEach(([px,py]) => {
+    const el = cellEls[px+','+py];
+    if (el) el.classList.add('lit');
+  });
+  if (hit) {
+    solved++;
+    solvedEl.textContent = solved;
+    statusEl.textContent = 'Hit! Loading next level...';
+    levelIdx++;
+    levelEl.textContent = (levelIdx % levels.length) + 1;
+    setTimeout(build, 1000);
+  } else {
+    statusEl.textContent = 'Missed the target — adjust your mirrors and fire again.';
+  }
+}
+
+document.getElementById('fire').addEventListener('click', fire);
+document.getElementById('clear').addEventListener('click', () => { mirrors = {}; build(); });
+
+build();
+</script>
+
+</body>
+</html>

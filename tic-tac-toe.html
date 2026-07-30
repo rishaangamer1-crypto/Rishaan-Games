@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tic Tac Toe · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .mode-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; }
+  .mode-btn {
+    background: #1F2640; border: 1px solid #2A3050; color: #F2F0E9;
+    padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 700;
+  }
+  .mode-btn.active { background: #00E58F; color: #0B0E1A; border-color: #00E58F; }
+
+  .ttt-board {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 260px;
+    margin: 0 auto 18px;
+  }
+  .ttt-cell {
+    aspect-ratio: 1;
+    background: #1F2640;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 34px;
+    cursor: pointer;
+    color: #3DE8FF;
+  }
+  .ttt-cell.o { color: #FF3D81; }
+  .ttt-cell.won { background: #FFD23D22; box-shadow: inset 0 0 0 2px #FFD23D; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">TIC TAC TOE</h1>
+
+  <div class="mode-row">
+    <button class="mode-btn active" id="mode-cpu">vs Computer</button>
+    <button class="mode-btn" id="mode-2p">2 Player</button>
+  </div>
+
+  <div class="score-row">
+    <div><span id="label-x">X</span>: <b id="score-x">0</b></div>
+    <div>Draws: <b id="score-d">0</b></div>
+    <div><span id="label-o">O</span>: <b id="score-o">0</b></div>
+  </div>
+
+  <div class="ttt-board" id="board"></div>
+  <p class="hint" id="status">X goes first. Click a square to play.</p>
+  <button class="control" id="restart">New Round</button>
+</div>
+
+<script>
+const boardEl = document.getElementById('board');
+const statusEl = document.getElementById('status');
+const scoreXEl = document.getElementById('score-x');
+const scoreOEl = document.getElementById('score-o');
+const scoreDEl = document.getElementById('score-d');
+const labelXEl = document.getElementById('label-x');
+const labelOEl = document.getElementById('label-o');
+
+let board, turn, gameOver, mode = 'cpu';
+let scores = { X: 0, O: 0, draw: 0 };
+
+const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+function checkWinner(b) {
+  for (const line of LINES) {
+    const [a,b1,c] = line;
+    if (b[a] && b[a] === b[b1] && b[a] === b[c]) return { player: b[a], line };
+  }
+  return b.every(c => c) ? { player: 'draw', line: null } : null;
+}
+
+function minimax(b, player) {
+  const result = checkWinner(b);
+  if (result) {
+    if (result.player === 'X') return { score: 1 };
+    if (result.player === 'O') return { score: -1 };
+    return { score: 0 };
+  }
+  const moves = [];
+  for (let i = 0; i < 9; i++) {
+    if (!b[i]) {
+      b[i] = player;
+      const r = minimax(b, player === 'X' ? 'O' : 'X');
+      moves.push({ index: i, score: r.score });
+      b[i] = null;
+    }
+  }
+  return player === 'X'
+    ? moves.reduce((best, m) => m.score > best.score ? m : best)
+    : moves.reduce((best, m) => m.score < best.score ? m : best);
+}
+
+function newRound() {
+  board = Array(9).fill(null);
+  turn = 'X';
+  gameOver = false;
+  render();
+  statusEl.textContent = 'X goes first. Click a square to play.';
+}
+
+function render(winLine) {
+  boardEl.innerHTML = '';
+  board.forEach((v, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'ttt-cell' + (v === 'o' ? '' : '') + (v === 'O' ? ' o' : '');
+    if (winLine && winLine.includes(i)) cell.classList.add('won');
+    cell.textContent = v || '';
+    cell.addEventListener('click', () => handleClick(i));
+    boardEl.appendChild(cell);
+  });
+}
+
+function handleClick(i) {
+  if (gameOver || board[i]) return;
+  if (mode === 'cpu' && turn === 'O') return; // block clicking during CPU's turn
+  play(i);
+}
+
+function play(i) {
+  board[i] = turn;
+  const result = checkWinner(board);
+  if (result) {
+    finishRound(result);
+    return;
+  }
+  turn = turn === 'X' ? 'O' : 'X';
+  render();
+  statusEl.textContent = `${turn}'s turn`;
+
+  if (mode === 'cpu' && turn === 'O' && !gameOver) {
+    setTimeout(cpuMove, 350);
+  }
+}
+
+function cpuMove() {
+  if (gameOver) return;
+  const move = minimax([...board], 'O');
+  play(move.index);
+}
+
+function finishRound(result) {
+  gameOver = true;
+  render(result.line);
+  if (result.player === 'draw') {
+    scores.draw++;
+    scoreDEl.textContent = scores.draw;
+    statusEl.textContent = "It's a draw!";
+  } else {
+    scores[result.player]++;
+    if (result.player === 'X') scoreXEl.textContent = scores.X;
+    else scoreOEl.textContent = scores.O;
+    statusEl.textContent = `${result.player} wins!`;
+  }
+}
+
+document.getElementById('restart').addEventListener('click', newRound);
+
+document.getElementById('mode-cpu').addEventListener('click', () => setMode('cpu'));
+document.getElementById('mode-2p').addEventListener('click', () => setMode('2p'));
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('mode-cpu').classList.toggle('active', m === 'cpu');
+  document.getElementById('mode-2p').classList.toggle('active', m === '2p');
+  labelXEl.textContent = 'X';
+  labelOEl.textContent = m === 'cpu' ? 'CPU' : 'O';
+  scores = { X: 0, O: 0, draw: 0 };
+  scoreXEl.textContent = 0;
+  scoreOEl.textContent = 0;
+  scoreDEl.textContent = 0;
+  newRound();
+}
+
+newRound();
+</script>
+
+</body>
+</html>

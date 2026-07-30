@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Number Path · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  .np-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    width: 300px;
+    padding: 12px;
+  }
+  .np-cell {
+    aspect-ratio: 1;
+    background: #1F2640;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .np-cell.selected { background: #3DE8FF; color: #0B0E1A; }
+  .np-cell.cleared { background: #151A2E; color: #2A3050; cursor: default; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">NUMBER PATH</h1>
+  <div class="score-row">
+    <div>Target: <b id="target">0</b></div>
+    <div>Running: <b id="running">0</b></div>
+    <div>Score: <b id="score">0</b></div>
+  </div>
+  <div class="np-board board" id="board"></div>
+  <button class="control" id="submit">Submit Path</button>
+  <button class="control" id="clear">Clear Selection</button>
+  <p class="hint">Click adjacent cells (up/down/left/right, no diagonals, no repeats) so their sum matches the target, then submit to clear them and score.</p>
+</div>
+
+<script>
+const boardEl = document.getElementById('board');
+const targetEl = document.getElementById('target');
+const runningEl = document.getElementById('running');
+const scoreEl = document.getElementById('score');
+const SIZE = 5;
+let grid, selected, target, score, cellEls;
+
+function build() {
+  grid = Array.from({length: SIZE*SIZE}, () => 1 + Math.floor(Math.random() * 9));
+  selected = [];
+  score = 0;
+  scoreEl.textContent = score;
+  newTarget();
+  render();
+}
+
+function newTarget() {
+  // pick a small random walk of remaining cells to derive an achievable target
+  const remaining = grid.map((v,i) => v !== null ? i : -1).filter(i => i !== -1);
+  if (!remaining.length) { targetEl.textContent = '—'; return; }
+  let start = remaining[Math.floor(Math.random() * remaining.length)];
+  let path = [start];
+  let sum = grid[start];
+  const steps = 1 + Math.floor(Math.random() * 3);
+  for (let s = 0; s < steps; s++) {
+    const last = path[path.length - 1];
+    const neighbors = getNeighbors(last).filter(n => grid[n] !== null && !path.includes(n));
+    if (!neighbors.length) break;
+    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+    path.push(next);
+    sum += grid[next];
+  }
+  target = sum;
+  targetEl.textContent = target;
+}
+
+function getNeighbors(i) {
+  const r = Math.floor(i / SIZE), c = i % SIZE;
+  const res = [];
+  if (r > 0) res.push(i - SIZE);
+  if (r < SIZE-1) res.push(i + SIZE);
+  if (c > 0) res.push(i - 1);
+  if (c < SIZE-1) res.push(i + 1);
+  return res;
+}
+
+function render() {
+  boardEl.innerHTML = '';
+  cellEls = [];
+  grid.forEach((v, i) => {
+    const el = document.createElement('div');
+    el.className = 'np-cell' + (v === null ? ' cleared' : '');
+    el.textContent = v === null ? '' : v;
+    if (v !== null) el.addEventListener('click', () => toggle(i));
+    boardEl.appendChild(el);
+    cellEls.push(el);
+  });
+  updateSelectedStyles();
+}
+
+function toggle(i) {
+  const idx = selected.indexOf(i);
+  if (idx !== -1) {
+    // clicking the last-selected cell deselects it; clicking elsewhere is ignored to keep path simple
+    if (idx === selected.length - 1) selected.pop();
+    updateSelectedStyles();
+    return;
+  }
+  if (selected.length === 0 || getNeighbors(selected[selected.length-1]).includes(i)) {
+    selected.push(i);
+  }
+  updateSelectedStyles();
+}
+
+function updateSelectedStyles() {
+  cellEls.forEach((el, i) => el.classList.toggle('selected', selected.includes(i)));
+  const sum = selected.reduce((a, i) => a + grid[i], 0);
+  runningEl.textContent = sum;
+}
+
+document.getElementById('submit').addEventListener('click', () => {
+  const sum = selected.reduce((a, i) => a + grid[i], 0);
+  if (sum === target && selected.length > 0) {
+    selected.forEach(i => grid[i] = null);
+    score += selected.length * 5;
+    scoreEl.textContent = score;
+    selected = [];
+    if (grid.every(v => v === null)) {
+      grid = Array.from({length: SIZE*SIZE}, () => 1 + Math.floor(Math.random() * 9));
+    }
+    newTarget();
+    render();
+  } else {
+    selected = [];
+    render();
+  }
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+  selected = [];
+  updateSelectedStyles();
+});
+
+build();
+</script>
+
+</body>
+</html>

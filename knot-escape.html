@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knot Escape · Rishaan Games</title>
+<link rel="stylesheet" href="../style.css">
+<style>
+  #knot-svg { background: #151A2E; border-radius: 10px; touch-action: none; }
+  .knot-node { cursor: grab; }
+</style>
+</head>
+<body>
+
+<div class="game-page">
+  <a class="back-link" href="../index.html">&larr; Back to hub</a>
+  <h1 class="pixel">KNOT ESCAPE</h1>
+  <div class="score-row">
+    <div>Crossings: <b id="crossings">0</b></div>
+    <div>Solved: <b id="solved">0</b></div>
+  </div>
+  <svg id="knot-svg" width="320" height="320"></svg>
+  <p class="hint">Drag the dots so none of the connecting lines cross each other.</p>
+  <button class="control" id="shuffle">New Knot</button>
+</div>
+
+<script>
+const svg = document.getElementById('knot-svg');
+const crossingsEl = document.getElementById('crossings');
+const solvedEl = document.getElementById('solved');
+const N = 6;
+const W = 320, H = 320, R = 14;
+let nodes, edges, lineEls, nodeEls, solved = 0, dragging = null;
+
+function randomLayout() {
+  nodes = [];
+  for (let i = 0; i < N; i++) {
+    nodes.push({
+      x: 40 + Math.random() * (W - 80),
+      y: 40 + Math.random() * (H - 80)
+    });
+  }
+  edges = [];
+  for (let i = 0; i < N; i++) edges.push([i, (i + 1) % N]);
+}
+
+function orient(p, q, r) {
+  const val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+  if (Math.abs(val) < 1e-9) return 0;
+  return val > 0 ? 1 : 2;
+}
+function onSegment(p, q, r) {
+  return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+         q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
+}
+function segmentsIntersect(p1, q1, p2, q2) {
+  const o1 = orient(p1, q1, p2), o2 = orient(p1, q1, q2);
+  const o3 = orient(p2, q2, p1), o4 = orient(p2, q2, q1);
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+  if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+  if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+  if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+  return false;
+}
+
+function sharesEndpoint(e1, e2) {
+  return e1[0] === e2[0] || e1[0] === e2[1] || e1[1] === e2[0] || e1[1] === e2[1];
+}
+
+function countCrossings() {
+  let count = 0;
+  for (let i = 0; i < edges.length; i++) {
+    for (let j = i + 1; j < edges.length; j++) {
+      if (sharesEndpoint(edges[i], edges[j])) continue;
+      const [a, b] = edges[i], [c, d] = edges[j];
+      if (segmentsIntersect(nodes[a], nodes[b], nodes[c], nodes[d])) count++;
+    }
+  }
+  return count;
+}
+
+function build() {
+  svg.innerHTML = '';
+  lineEls = edges.map(([a, b]) => {
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('stroke', '#3DE8FF');
+    line.setAttribute('stroke-width', '3');
+    svg.appendChild(line);
+    return line;
+  });
+  nodeEls = nodes.map((n, i) => {
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('r', R);
+    c.setAttribute('fill', '#FFD23D');
+    c.classList.add('knot-node');
+    c.addEventListener('pointerdown', e => { dragging = i; c.setPointerCapture(e.pointerId); });
+    svg.appendChild(c);
+    return c;
+  });
+  render();
+}
+
+function render() {
+  edges.forEach(([a, b], i) => {
+    lineEls[i].setAttribute('x1', nodes[a].x);
+    lineEls[i].setAttribute('y1', nodes[a].y);
+    lineEls[i].setAttribute('x2', nodes[b].x);
+    lineEls[i].setAttribute('y2', nodes[b].y);
+  });
+  nodeEls.forEach((el, i) => {
+    el.setAttribute('cx', nodes[i].x);
+    el.setAttribute('cy', nodes[i].y);
+  });
+  const crossings = countCrossings();
+  crossingsEl.textContent = crossings;
+  nodeEls.forEach(el => el.setAttribute('fill', crossings === 0 ? '#00E58F' : '#FFD23D'));
+  if (crossings === 0) {
+    lineEls.forEach(el => el.setAttribute('stroke', '#00E58F'));
+  } else {
+    lineEls.forEach(el => el.setAttribute('stroke', '#3DE8FF'));
+  }
+  return crossings;
+}
+
+svg.addEventListener('pointermove', e => {
+  if (dragging === null) return;
+  const rect = svg.getBoundingClientRect();
+  nodes[dragging].x = Math.max(R, Math.min(W - R, e.clientX - rect.left));
+  nodes[dragging].y = Math.max(R, Math.min(H - R, e.clientY - rect.top));
+  const crossings = render();
+  if (crossings === 0) {
+    solved++;
+    solvedEl.textContent = solved;
+  }
+});
+
+svg.addEventListener('pointerup', () => { dragging = null; });
+svg.addEventListener('pointercancel', () => { dragging = null; });
+
+document.getElementById('shuffle').addEventListener('click', () => { randomLayout(); build(); });
+
+randomLayout();
+build();
+</script>
+
+</body>
+</html>
