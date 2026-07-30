@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rishaan Games</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="logo">RISHAAN<span>GAMES</span></div>
+  <div class="search-wrap">
+    <input type="text" id="search" placeholder="Search games...">
+  </div>
+  <a href="maker.html" class="count" style="cursor:pointer; color:var(--green); font-weight:700;">🛠 Create</a>
+  <div class="count"><span id="count">10</span> games</div>
+</nav>
+
+<div class="hero">
+  <div class="hero-icon">🌀</div>
+  <div class="hero-text">
+    <span class="badge">Trending now</span>
+    <h1>GRAVITY FLIP RUNNER</h1>
+    <p>Flip gravity between floor and ceiling to dodge an endless run of spikes. How far can you get?</p>
+    <a href="games/gravity-flip.html"><button class="play-btn">▶ Play Now</button></a>
+  </div>
+</div>
+
+<div class="filters" id="filters">
+  <button class="filter-pill active" data-cat="all">All Games</button>
+  <button class="filter-pill" data-cat="arcade">Arcade</button>
+  <button class="filter-pill" data-cat="puzzle">Puzzle</button>
+  <button class="filter-pill" data-cat="reflex">Reflex</button>
+  <button class="filter-pill" data-cat="original">Original</button>
+  <button class="filter-pill" data-cat="2player">2 Player</button>
+</div>
+
+<div class="grid" id="grid">
+
+  <a class="g-card make-card" href="maker.html">
+    <div class="thumb" style="background: linear-gradient(135deg, #1F2640, #151A2E); border: 2px dashed var(--green);">➕
+    </div>
+    <div class="info"><span class="cat" style="color:var(--green);">Build Your Own</span><h2>Make a Game</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="arcade" data-name="snake" href="games/snake.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--green), var(--cyan));">🐍
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Arcade</span><h2>Snake</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="puzzle" data-name="memory match" href="games/memory.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--purple), var(--pink));">🧠
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Puzzle</span><h2>Memory Match</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="reflex" data-name="reaction test" href="games/reaction.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--yellow), var(--pink));">⚡
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Reflex</span><h2>Reaction Test</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="puzzle" data-name="2048" href="games/2048.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--cyan), var(--purple));">🔢
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Puzzle</span><h2>2048</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="echo chase" href="games/echo-chase.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--pink), var(--purple));">👻
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Echo Chase</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="pulse grid" href="games/pulse-grid.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--cyan), var(--green));">💡
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Pulse Grid</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="color wheel gate" href="games/color-wheel-gate.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--yellow), var(--cyan));">🎡
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Color Wheel Gate</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="word ladder sprint" href="games/word-ladder.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--green), var(--purple));">🪜
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Word Ladder Sprint</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="number path" href="games/number-path.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--purple), var(--yellow));">🧮
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Number Path</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="gravity flip runner" href="games/gravity-flip.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--pink), var(--cyan));">🌀
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Gravity Flip Runner</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="mirror bounce" href="games/mirror-bounce.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--cyan), var(--pink));">🪞
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Mirror Bounce</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="balance stack" href="games/balance-stack.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--green), var(--yellow));">⚖️
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Balance Stack</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="beat tap" href="games/beat-tap.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--purple), var(--green));">🎵
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Beat Tap</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="sequence snap" href="games/sequence-snap.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--yellow), var(--purple));">🧩
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Sequence Snap</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="original" data-name="knot escape" href="games/knot-escape.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--pink), var(--yellow));">🪢
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">Original</span><h2>Knot Escape</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="2player" data-name="tic tac toe" href="games/tic-tac-toe.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--cyan), var(--green));">⭕
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">2 Player</span><h2>Tic Tac Toe</h2></div>
+  </a>
+
+  <a class="g-card" data-cat="2player" data-name="bike race 3d" href="games/bike-race-3d.html">
+    <div class="thumb" style="background: linear-gradient(135deg, var(--purple), var(--pink));">🏍️
+      <div class="play-overlay"><span>▶ Play</span></div>
+    </div>
+    <div class="info"><span class="cat">2 Player · 3D</span><h2>Bike Race 3D</h2></div>
+  </a>
+
+</div>
+
+<footer>Rishaan Games &middot; add new games in <code>/games</code> and list them here</footer>
+
+<script>
+const cards = Array.from(document.querySelectorAll('.g-card:not(.make-card)'));
+const pills = Array.from(document.querySelectorAll('.filter-pill'));
+const searchInput = document.getElementById('search');
+const countEl = document.getElementById('count');
+let activeCat = 'all';
+
+function applyFilters() {
+  const q = searchInput.value.trim().toLowerCase();
+  let visible = 0;
+  cards.forEach(card => {
+    const matchesCat = activeCat === 'all' || card.dataset.cat === activeCat;
+    const matchesSearch = !q || card.dataset.name.includes(q);
+    const show = matchesCat && matchesSearch;
+    card.classList.toggle('hidden', !show);
+    if (show) visible++;
+  });
+  countEl.textContent = visible;
+}
+
+pills.forEach(pill => {
+  pill.addEventListener('click', () => {
+    pills.forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    activeCat = pill.dataset.cat;
+    applyFilters();
+  });
+});
+
+searchInput.addEventListener('input', applyFilters);
+applyFilters();
+</script>
+
+</body>
+</html>
